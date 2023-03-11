@@ -17,8 +17,7 @@
        string/lower-case
        (format "https://%s.api.riotgames.com")))
 
-(defn- generate-specs [{:keys [region platform lang]}
-                       {:keys [api-key]}]
+(defn- generate-specs [{:keys [region platform lang api-key]}]
   {:hosts    {:region   (region-or-platform->host region)
               :platform (region-or-platform->host platform)}
    :version  (get-latest-version)
@@ -27,9 +26,8 @@
    :platform platform
    :lang     lang})
 
-(defn client [{:keys [_region _platform _lang] :as opts}
-              {:keys [_api-key] :as config}]
-  (let [base-client {:specs (generate-specs opts config)
+(defn client [{:keys [_region _platform _lang _api-key] :as config}]
+  (let [base-client {:specs (generate-specs config)
                      :ops   (merge
                               lol-http.matches/ops
                               lol-http.summoner/ops)}]

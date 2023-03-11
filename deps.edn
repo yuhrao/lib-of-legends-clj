@@ -2,4 +2,5 @@
  :deps  {org.clojure/clojure                 {:mvn/version "1.11.1"}
          clj-http/clj-http                   {:mvn/version "3.12.3"}
          camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.3"}
+         metosin/malli                       {:mvn/version "0.10.2"}
          org.clojure/data.json               {:mvn/version "2.4.0"}}}

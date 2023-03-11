@@ -2,12 +2,12 @@
   (:require [riot.client.http :as riot-client.http]
             [riot.client.lol.dataset :as lol-client.dataset]))
 
-(defn- normalize-team [client team]
+(defn- normalize-team [cli team]
   (let [bans (->> team
                   :bans
                   (map #(update % :champion-id (partial
                                                  lol-client.dataset/champion-key->champion
-                                                 client))))]
+                                                 cli))))]
     (-> team
         (dissoc :team-id
                 :queue-id)
@@ -19,7 +19,7 @@
                     lol-client.dataset/team-id->team-side
                     :side)))))
 
-(defn normalize-participants [client participant]
+(defn normalize-participants [cli participant]
   (let [
         items (-> participant
                   (select-keys [:item-1
@@ -34,7 +34,7 @@
                      :champion-id
                      ((partial
                         lol-client.dataset/champion-key->champion
-                        client)))]
+                        cli)))]
     (-> participant
         (dissoc
           :challenges
@@ -56,11 +56,11 @@
         (assoc :items items
                :champion champion))))
 
-(defn- normalize-match [client match]
+(defn- normalize-match [cli match]
   (let [info (:info match)
         map-data (->> info
                       :map-id
-                      (lol-client.dataset/map-id->map client))
+                      (lol-client.dataset/map-id->map cli))
         game (-> info
                  (select-keys [:game-type
                                :game-mode
@@ -74,13 +74,13 @@
                                            :game-id       :id}))
         teams (->> info
                    :teams
-                   (map (partial normalize-team client))
+                   (map (partial normalize-team cli))
                    (reduce #(assoc %1 (:side %2) %2) {}))
 
         participants (->> info
                           :participants
                           (take 1)
-                          (map (partial normalize-participants client)))]
+                          (map (partial normalize-participants cli)))]
     (-> info
         (dissoc :map-id
                 :game-type
@@ -98,26 +98,34 @@
           :teams teams
           :game game))))
 
-(defn- get-match [client]
+(defn- get-match [cli]
   (fn [{:keys [match-id]}]
     (let [path (format "/lol/match/v5/matches/%s" match-id)]
-      (-> (riot-client.http/request client {:path     path
+      (-> (riot-client.http/request cli {:path     path
                                             :method   :get
                                             :strategy :region})
           :body
-          ((partial normalize-match client))))))
+          ((partial normalize-match cli))))))
 
-(defn- list-matches [client]
+(defn- list-matches [cli]
   (fn [{:keys [puuid limit offset]
         :or   {limit  10
                offset 0}}]
     (let [path (format "/lol/match/v5/matches/by-puuid/%s/ids" puuid)]
-      (-> (riot-client.http/request client {:path         path
+      (-> (riot-client.http/request cli {:path         path
                                             :query-params {:count limit
                                                            :start offset}
                                             :method       :get
                                             :strategy     :region})
           :body))))
 
-(def ops {:list-matches list-matches
-          :get-match    get-match})
+(def ops {:list-matches {:doc {:description "List player's matches"}
+                         :spec {:request [:map
+                                          [:puuid :string]
+                                          [:limit {:opti3nal true :default 10} :int]
+                                          [:offset {:optional true :default 0} :int]]}
+                         :handler-fn list-matches}
+          :get-match    {:doc {:description "Get a match by it's ID"}
+                         :spec {:request [:map
+                                          [:match-id :string]]}
+                         :handler-fn get-match}})
